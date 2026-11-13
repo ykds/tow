@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#191b1f" />
+    <title>Two</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="项目与 Agent">
+        <div class="brand"><img src="/src-tauri/icons/wordmark.svg" alt="Two" /></div>
+        <div class="sidebar-head"><span>项目 <span id="project-count">0</span></span><button id="add-project" class="icon-button" title="添加项目" aria-label="添加项目">＋</button></div>
+        <div id="project-tree" class="project-tree"></div>
+        <div class="sidebar-foot" aria-hidden="true"></div>
+      </aside>
+      <main class="workspace">
+        <header class="workspace-head"><div class="breadcrumb" id="breadcrumb">选择项目</div><div id="session-state" class="header-state"></div><button id="session-actions" class="icon-button" title="会话操作" aria-label="会话操作" hidden>···</button></header>
+        <div id="workspace-content" class="workspace-content"><div id="welcome" class="welcome"><h1>暂无项目</h1><button id="welcome-action" class="button">添加项目</button></div><div id="terminal-stage" class="terminal-stage" hidden></div></div>
+        <footer id="status-line" class="status-line"></footer>
+      </main>
+    </div>
+    <div id="menu" class="menu" hidden></div>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <dialog id="dialog"><form id="dialog-form" method="dialog"><h2 id="dialog-title"></h2><p id="dialog-message"></p><label id="dialog-label" for="dialog-input" hidden>名称</label><input id="dialog-input" maxlength="60" hidden /><div class="dialog-actions"><button id="dialog-cancel" type="button" class="button">取消</button><button id="dialog-confirm" type="submit" class="button button-primary">确定</button></div></form></dialog>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

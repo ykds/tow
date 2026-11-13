@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+dist/
+target/
+src-tauri/target/
+src-tauri/gen/schemas/
+coverage/
+
+# Local verification and logs
+.tmp/
+*.log
+
+# Private environment; sanitized templates may be tracked
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# OS and editor state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local AI tool state; shared rules remain in AGENTS.md
+.codex/
+.claude/
+.cursor/
