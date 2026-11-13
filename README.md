@@ -2,7 +2,7 @@
 
 轻量、跨平台的 Agent 终端工作台。按“项目目录 → 终端会话”组织多个终端，在项目目录打开终端后自行运行 `codex`、`agy` 等命令；切换时终端继续运行。
 
-桌面工程已经实现，macOS arm64 的 Release `.app` 已成功构建。为 PTY 子进程设置 `TERM=xterm-256color` 后，用户已在真实窗口确认退格显示错位修复。新终端、项目选择和删除流程尚未完成端到端验收；Windows 与 Linux 尚未运行。当前验证范围见 [ROADMAP.md](ROADMAP.md)。
+桌面工程已经实现，macOS arm64 和 x64 的 Release `.app` 已成功构建。为 PTY 子进程设置 `TERM=xterm-256color` 后，用户已在 arm64 真实窗口确认退格显示错位修复。新终端、项目选择和删除流程尚未完成端到端验收；macOS Intel、Windows 与 Linux 尚未运行。当前验证范围见 [ROADMAP.md](ROADMAP.md)。
 
 ## 运行
 
@@ -13,13 +13,22 @@ npm ci
 npm run tauri -- dev
 ```
 
-在 macOS 上构建本地应用：
+安装 GNU Make 和对应平台的 Tauri 前置依赖后，构建当前主机的 Release 应用：
 
 ```sh
-npm run tauri -- build --bundles app
+make app
 ```
 
-产物位于 `src-tauri/target/release/bundle/macos/Two.app`。本机使用项目忽略目录 `.tmp/` 下的 Rust 工具链完成构建，正式运行不依赖该目录。项目目录、内部包名和应用数据标识继续使用 `agent-workspace`，以便保留现有配置。当前产物未签名、公证或做干净环境安装验收。
+也可指定目标。Windows 和 Linux 目标须在对应系统上执行；macOS 两种架构均须在 macOS 上构建，并预先安装相应的 Rust target（例如 `rustup target add x86_64-apple-darwin`）。`make app` 在 macOS 上按主机架构选择目标，在 Windows／Linux 上构建 x64 产物。
+
+| 命令 | 产物 |
+| --- | --- |
+| `make mac-arm64` | `src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Two.app` |
+| `make mac-amd64` | `src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Two.app` |
+| `make windows` | `src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe` |
+| `make linux` | `src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb` |
+
+本机使用项目忽略目录 `.tmp/` 下的 Rust 工具链完成构建，运行应用不依赖该目录。项目目录、内部包名和应用数据标识继续使用 `agent-workspace`，以便保留现有配置。当前产物未签名、公证或做干净环境安装验收；macOS x64 已在 arm64 主机构建，但未在 Intel 机器运行。Windows 和 Linux 的打包与运行仍待对应环境验证。
 
 前端单独运行 `npm run dev` 只适合查看布局；普通浏览器没有 Tauri 桥接，无法创建项目或终端。实际功能需要通过桌面应用运行。
 
@@ -68,4 +77,4 @@ open design/concept.html
 
 ## 技术栈与平台
 
-Tauri 2 + TypeScript + HTML／CSS + xterm.js + Rust，PTY 使用 `portable-pty 0.9.0`，PTY 输出通过 Tauri Channel 保序传给界面。xterm 使用默认 DOM 渲染；PTY 子进程明确设置 `TERM=xterm-256color`，让 shell 按该终端支持的控制序列输出。本机 Codex 适配基线为 `codex-cli 0.167.2`。首批目标为 macOS 14+ arm64、Windows 11 x64 和 Ubuntu 24.04 LTS x64；只有 macOS arm64 完成构建，三平台的真实功能和性能验收均未完成。
+Tauri 2 + TypeScript + HTML／CSS + xterm.js + Rust，PTY 使用 `portable-pty 0.9.0`，PTY 输出通过 Tauri Channel 保序传给界面。xterm 使用默认 DOM 渲染；PTY 子进程明确设置 `TERM=xterm-256color`，让 shell 按该终端支持的控制序列输出。本机 Codex 适配基线为 `codex-cli 0.167.2`。首批目标为 macOS 14+ arm64／x64、Windows 11 x64 和 Ubuntu 24.04 LTS x64；两种 macOS 架构已完成构建，macOS Intel 的运行、Windows／Linux 的构建和运行，以及各平台完整功能与性能验收仍未完成。
