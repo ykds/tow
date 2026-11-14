@@ -7,8 +7,8 @@
 - 阶段：M0 完成；M1～M3 的主要代码已实现，真实桌面端到端验收未完成；M4 的 macOS arm64／x64 新终端版本已构建，性能及平台验收待测。
 - 已有：Tauri 2 + TypeScript + xterm.js + Rust 工程、`portable-pty` 会话、PTY 输出保序 Channel、按序写入的终端输入队列与尺寸队列、PTY 子进程的 `TERM=xterm-256color`、项目树、目录选择、项目行加号直接新建登录终端、会话删除及右击菜单、双击退出会话重启、Codex／agy 首条任务 Hook 命名、Codex 终端标题补命名、Rust 后端后台解析 OSC 7501 工作状态、匹配任务 ID 的本地 `task_complete` 兜底、仅在 Two 终端内使 `codex` 使用独立 app-server 的启动脚本、会话名前的进程名、固定高度的项目状态汇总、并行退出、本地原子写入，以及 macOS arm64／x64、Windows x64、Linux x64 的本机构建 Make 入口；旧 Codex 直启兼容，侧栏和应用图标使用英文 `Two` 字标。
 - 已验证：用户确认设置 `TERM` 后的 macOS 真实窗口退格和方向键显示已修复。17:07 诊断包复现了任务结束后仍显示工作中；Codex 记录有 `task_complete`，Two 只收到 OSC 状态，没有任何 Hook helper 调用。共享 app-server 的 Hook 进程无法看到 Two 的会话变量。17:26 包通过 Rust 17 项库测试、1 项 helper 测试和前端构建；用户在真实 Two 窗口确认 `codex` 命中包内脚本、当前会话完成后状态自动更新，切到其他会话后完成状态也自动更新。
-- 待验证：新构建包的目录选择、输入输出、手动运行 Agent、多会话切换、双击重启与删除，以及真实窗口退出耗时和冷启动性能。Channel 版和 WebGL 版曾由用户复测，退格显示仍错位；设置 `TERM` 后该问题已修复。当前环境无法读取桌面显示器；macOS Intel、Windows 和 Ubuntu 无验收机器，Windows 与 Ubuntu 的实测已暂缓。
-- 待验证：Codex 首条任务标题持久化、退出旧 Agent 后重新命名及进程名前缀的完整链路；Windows／Ubuntu 的 Hook 安装及运行仍待对应平台环境。当前会话与切换后的 Codex 完成状态已在 macOS 真实窗口确认。
+- 待验证：新构建包的目录选择、输入输出、手动运行 Agent、多会话切换、双击重启与删除，以及真实窗口退出耗时和冷启动性能。Channel 版和 WebGL 版曾由用户复测，退格显示仍错位；设置 `TERM` 后该问题已修复。当前环境无法读取桌面显示器；用户已确认 amd64 修复版后台状态自动刷新。Windows 和 Ubuntu 无验收机器，实测已暂缓。
+- 待验证：Codex 首条任务标题持久化、退出旧 Agent 后重新命名及进程名前缀的完整链路；Windows／Ubuntu 的 Hook 安装及运行仍待对应平台环境。arm64 的当前会话与切换后完成状态、amd64 的后台自动刷新已在真实窗口确认。
 - 下一步：继续在可交互桌面完成 A01～A13 中未覆盖的创建、删除、命名、退出和性能场景；旧 Codex 直启会话、Windows 和 Ubuntu 保持未验收。
 
 勾选代表本项必要验证已完成；没有真实终端或平台验证的事项不得因原型演示成功而勾选。以下里程碑按顺序推进，不预先承诺工期。
@@ -71,7 +71,7 @@
 ## M4：响应速度与三平台验收
 
 - [ ] 在开始 Windows／Linux 实测前，落实 Windows 11 x64 和 Ubuntu 24.04 LTS x64 的可交互物理机或虚拟机；当前两者均缺失。
-- [ ] 在 macOS Intel 环境运行 x64 `.app`；已在 arm64 主机跨架构构建，尚缺少 Intel 真机运行验收。
+- [ ] 在 macOS Intel 环境完整验收 x64 `.app`；用户已确认 amd64 修复版后台状态自动刷新，其余终端交互仍待复测。
 - [ ] 使用 Release 构建记录应用与 Agent 各自的资源消耗。
 - [ ] 按 PRD 测试冷启动、100 次切换、固定负载后台输出和反复创建／删除。
 - [ ] 验证初始目标：冷启动可交互不超过 1 秒，会话切换 P95 不超过 100 ms；不达标时记录原因与取舍。
@@ -89,6 +89,8 @@
 
 ## 最近完成
 
+- 2026-11-14：为改动前的 `main` 建立 `v0.1.0` 基线 tag；准备 v0.1.1，重排 README 的阅读顺序与段落，增加根据桌面布局绘制的宣传图。图中终端输出已明确标为演示内容。
+- 2026-11-13：amd64 状态刷新反馈对应机器缺少 `~/.codex/hooks.json`；Two 的包内 Codex 脚本现按进程注入 `UserPromptSubmit`／`Stop` Hook 配置，避免依赖全局配置。截图红框中的快捷键提示由 Codex 在输入草稿时主动隐藏，Two 不改写终端内容。
 - 2026-11-13 18:27：新增 `make app` 和按平台指定的本地构建入口；macOS arm64／x64 输出 `.app`，Windows x64 和 Linux x64 分别配置 NSIS 与 `.deb` 目标，并在 README 记录构建前提和产物路径。
 - 2026-11-13 17:37：清理旧版 `Agent Workspace.app`、未使用的移动端图标、zsh 测试历史、Finder 元数据及可重建的 Rust／前端构建缓存；保留当前 `Two.app`、项目本地 Rust 工具链和 npm 依赖。
 - 2026-11-13 17:26：针对共享 Codex app-server 丢失 Two 环境变量的问题，只在 Two 新终端的 `codex` 命令前加包内启动脚本，使用 `--no-daemon`；macOS 登录 zsh 代理原有启动配置后恢复脚本优先级。诊断代码已从新包移除，全局 Codex 配置未改；用户已确认前台和切走后的完成状态自动更新。
@@ -112,6 +114,9 @@
 
 ## 最近验证
 
+- 2026-11-14：v0.1.1 前端构建、Node 7 项、Rust 17 项库测试和 1 项 helper 测试通过；macOS x86_64 Release `Two.app` 构建成功（11.06 MiB），主程序架构为 x86_64，`Info.plist` 显示 0.1.1，包内 Codex 脚本与源码一致。宣传图 SVG 已渲染为 1600×900 PNG 并目视检查；新版本尚未在 arm64 或 x64 窗口复测。
+- 2026-11-14：用户在 amd64 修复版真实窗口确认后台状态自动刷新；两张截图显示输入前有 `for agents` 快捷键提示，输入后该行消失。对照 Codex TUI 源码，提示隐藏是有草稿时的既定行为，状态行仍显示。
+- 2026-11-13：macOS x86_64 本机 Rust 17 项库测试、1 项 helper 测试、Node 7 项测试及前端构建通过；x64 Release `Two.app` 构建成功（11.06 MiB），主程序架构、`Info.plist` 与包内脚本校验通过。桌面自动化权限未授予，真实窗口需由用户复测。
 - 2026-11-13 18:27：`make mac-arm64`、`make mac-amd64` 和 `make app` 均完成 Release 打包；两种 `.app` 分别约 10.83／11.06 MiB，可执行文件分别为 arm64／x86_64 Mach-O，`Info.plist` 均校验通过。Windows／Linux 目标经命令展开核对，打包及运行仍未实测。
 - 2026-11-13 17:37：清理后项目目录约 746 MiB；`Two.app` 的可执行文件、Codex 脚本、图标均存在且 `Info.plist` 通过 `plutil -lint`，未重新运行桌面交互或构建。下次 Rust 构建需重新生成编译缓存。
 - 2026-11-13 17:32：用户从 17:26 macOS 包新建终端，确认 `command -v codex` 指向包内脚本；当前会话完成和切到其他会话后的完成状态均自动更新，无需点击工作区。进程参数实际包含 `--no-daemon`；本地 Codex 记录 `source=cli`，两轮任务的 `task_started`／`task_complete` ID 分别匹配。旧诊断日志已清理，Windows／Linux 未测。

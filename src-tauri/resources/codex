@@ -1,2 +1,4 @@
 #!/bin/sh
-exec "$AGENT_WORKSPACE_CODEX_COMMAND" --no-daemon "$@"
+exec "$AGENT_WORKSPACE_CODEX_COMMAND" --no-daemon \
+  -c "$AGENT_WORKSPACE_CODEX_SUBMIT_HOOK" \
+  -c "$AGENT_WORKSPACE_CODEX_STOP_HOOK" "$@"

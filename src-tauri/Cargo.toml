@@ -1,6 +1,6 @@
 [package]
 name = "agent-workspace"
-version = "0.1.0"
+version = "0.1.1"
 description = "A small local workspace for parallel Codex terminals"
 edition = "2021"
 

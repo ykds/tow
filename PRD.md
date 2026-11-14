@@ -1,10 +1,10 @@
 # Two 产品需求文档
 
-版本：v0.1 需求基线；实现与验证状态更新于 2026-11-13。面向产品、设计、开发与验收人员。
+版本：v0.1 需求基线；实现与验证状态更新于 2026-11-14。面向产品、设计、开发与验收人员。
 
 本项目是一款轻量、跨平台的 Agent 终端工作台：用户选择本地目录创建项目，在项目下打开多个独立终端，自行输入 `codex`、`agy` 等 Agent 命令。通过左侧项目树切换，右侧保留原生终端交互；切换和收起不影响进程。任务状态仅在接入可信 CLI 事件时显示。
 
-当前已有 Tauri 桌面工程、真实 PTY 进程管理和旧 Codex 会话的事件接入代码；包含新终端的 macOS arm64／x64 Release `.app` 已构建，x64 尚未在 Intel 机器运行。用户已确认 arm64 修正版中 Codex 完成状态在当前会话及切走后均自动更新；其他桌面交互和性能仍待逐项验收。原型入口为 [design/concept.html](design/concept.html)，逐项进度以 [ROADMAP.md](ROADMAP.md) 为准。
+当前已有 Tauri 桌面工程、真实 PTY 进程管理和旧 Codex 会话的事件接入代码；包含新终端的 macOS arm64／x64 Release `.app` 已构建，用户已在 amd64 修复版确认后台状态自动刷新，也已在 arm64 修正版确认当前会话及切走后的 Codex 完成状态自动更新；其他桌面交互和性能仍待逐项验收。原型入口为 [design/concept.html](design/concept.html)，逐项进度以 [ROADMAP.md](ROADMAP.md) 为准。
 
 ## 1. 使用场景与产品目标
 
@@ -48,7 +48,7 @@
 | 本地构建产物 | macOS `.app`、Windows NSIS 安装包、Ubuntu `.deb` | macOS 可跨架构构建，Windows／Linux 在对应系统构建；各平台运行需分别验收。签名、公证、公开发布不在首版范围 |
 | 性能 | 使用第 8 节的响应目标；内存与安装包阈值在最小终端验证后定案 | 不凭框架名称承诺实测数值 |
 
-验收环境现状已确认：本机 macOS 26.4.1 arm64 已用于开发和构建；当前执行环境无法访问桌面显示器，真实窗口交互仍待验。macOS Intel、Windows 和 Linux 暂无可交互验收机器；已有的 Windows／Linux 实测暂缓决定不代表通过验收。缺少对应环境时，不把该平台写成已支持；构建成功不能替代实际运行。
+验收环境现状已确认：此前 macOS 26.4.1 arm64 已用于开发和构建；当前命令环境为 macOS x86_64，但无法访问桌面显示器。用户已在 amd64 修复版确认后台状态自动刷新，其余交互仍待逐项复测。Windows 和 Linux 暂无可交互验收机器；已有的 Windows／Linux 实测暂缓决定不代表通过验收。缺少对应环境时，不把该平台写成已支持；构建成功不能替代实际运行。
 
 平台范围是有意限定的首批目标。Tauri [macOS 应用文档](https://v2.tauri.app/distribute/macos-application-bundle/) 允许配置最低系统版本；其 [Windows 安装文档](https://v2.tauri.app/distribute/windows-installer/) 列出了 NSIS；[Linux 前置条件](https://v2.tauri.app/start/prerequisites/) 包含 WebKitGTK 依赖。这里选择的版本与打包格式属于产品目标，不表示它们已通过本项目测试。
 
@@ -177,7 +177,7 @@ Codex 会话的未读是独立字段：在非当前会话或应用不在前台�
 
 旧 Codex 直启方式对 0.167.2 使用 `PreModelRequest`、`PermissionRequest`、`Interrupt` hook，以及 `notify` 的最终完成事件。CLI 已实际解析 hook 覆盖项并提示需要信任；隔离的一次真实回合经 Release helper 收到相同 `turn-id` 的开始与完成回调。hook 未信任或事件缺失时，输入后显示“状态未知”，不推断为工作中；真实桌面内的审批、中断和多轮状态仍待验。每次启动的运行 ID 与任务 ID 用于拒绝旧事件；子 Agent hook 带有 `agent_id` 时忽略，避免覆盖主任务。`notify` 只在该 CLI 进程范围内覆盖配置。新终端不注入这些事件配置。依据：[Codex Hooks 文档](https://learn.chatgpt.com/docs/hooks)。
 
-新终端的自动命名使用 Codex `UserPromptSubmit.prompt` 或 agy `PreInvocation.lastUserInput`。同一 Codex 提交事件还携带 `turn_id`，用于开始状态；`Stop` 携带轮次 ID，用于完成状态。Hook 仅在继承 Two 会话环境变量时将事件送到本地回环端口；后端用令牌、会话 ID 和运行 ID 校验，截取标题后写入工作台记录，不保存完整任务文本。Codex TUI 默认可连接共享 app-server，而其 Hook 进程沿用守护进程启动时的环境；因此 Two 终端中的 `codex` 命令经包内脚本追加 `--no-daemon`，使该会话的 Hook 使用自身环境。原有 shell 配置仍需加载，其他终端不受影响。全局 Hook 文件分别位于 `~/.codex/hooks.json` 与 `~/.gemini/config/hooks.json`，Two 外调用为空操作。Codex 提交与 `Stop` Hook 已在本机 CLI 审核并信任；用户已在修正版真实 Two 窗口中确认当前会话及切走后的任务完成状态自动更新。当前 macOS 之外的平台尚未安装或验证对应 Hook 配置。依据：[Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[Codex app-server daemon](https://github.com/openai/codex/blob/main/codex-rs/app-server-daemon/README.md) 与 [Antigravity Hooks](https://antigravity.google/docs/hooks?tab=cli)。
+新终端的自动命名使用 Codex `UserPromptSubmit.prompt` 或 agy `PreInvocation.lastUserInput`。同一 Codex 提交事件还携带 `turn_id`，用于开始状态；`Stop` 携带轮次 ID，用于完成状态。Hook 仅在继承 Two 会话环境变量时将事件送到本地回环端口；后端用令牌、会话 ID 和运行 ID 校验，截取标题后写入工作台记录，不保存完整任务文本。Codex TUI 默认可连接共享 app-server，而其 Hook 进程沿用守护进程启动时的环境；因此 Two 终端中的 `codex` 命令经包内脚本追加 `--no-daemon` 和进程专用的 `UserPromptSubmit`／`Stop` Hook 配置，使该会话的 Hook 使用自身环境，不依赖其他机器的全局 Hook 文件。原有 shell 配置仍需加载，其他终端不受影响。此前 arm64 环境的全局 Hook 文件位于 `~/.codex/hooks.json` 与 `~/.gemini/config/hooks.json`，Two 外调用为空操作。Codex 提交与 `Stop` Hook 曾在 arm64 CLI 审核并信任；用户已在修正版真实 Two 窗口中确认当前会话及切走后的任务完成状态自动更新。新注入的 Hook 首次运行时仍须在 Codex `/hooks` 中审核并信任，未信任的 Hook 会被跳过。用户已在 amd64 真实窗口确认后台状态自动刷新；agy 命名 Hook 仍依赖本机配置，Windows／Linux 尚未验收。依据：[Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[Codex app-server daemon](https://github.com/openai/codex/blob/main/codex-rs/app-server-daemon/README.md) 与 [Antigravity Hooks](https://antigravity.google/docs/hooks?tab=cli)。
 
 Codex 终端标题由 CLI 的 `/title` 配置决定；默认标题可能只有项目名，不能据此还原首条任务。终端状态序列是 CLI 报告的状态，不等于独立核验的任务结果；Codex 本身也有背景任务导致 `working` 延迟退出的已知情况。标题和状态回调按 Two 的运行 ID 隔离，手动命名优先。参考：[Codex 标题配置](https://learn.chatgpt.com/docs/developer-commands) 与 [Codex OSC 7501 报告](https://github.com/openai/codex/issues/58136)。
 
@@ -185,7 +185,7 @@ Codex 终端标题由 CLI 的 `/title` 配置决定；默认标题可能只有�
 
 ## 6. 界面设计
 
-设计参考为 [项目树结构截图](design/projects.png) 和 [交互原型](design/concept.html)。
+设计参考为 [项目树结构截图](design/projects.png) 和 [交互原型](design/concept.html)。README 的 [界面宣传图](design/readme-hero.png) 根据当前桌面布局绘制，终端内容是演示，不作为功能实测证据。
 
 | 元素 | 设计约束 |
 | --- | --- |
@@ -241,7 +241,7 @@ Codex 终端标题由 CLI 的 `/title` 配置决定；默认标题可能只有�
 - 使用固定输出速率和总量的脚本验证后台输出、输入延迟及切换；记录脚本、输出规模、缓冲设置。
 - 创建与删除多轮会话后检查残留进程和内存增长，不把缓存和持续泄漏混为一谈。
 
-每次报告写明系统、架构、硬件、CLI 版本、构建版本及场景。首批验收矩阵为 macOS 14+ arm64／x64、Windows 11 x64、Ubuntu 24.04 LTS x64；各平台须分别验证真实进程，且构建和运行检查不可互相替代。M1 先在现有 macOS arm64 环境验证终端与状态链路；macOS Intel、Windows 与 Ubuntu 的可交互验收环境目前均缺失。未覆盖平台保持未验收。
+每次报告写明系统、架构、硬件、CLI 版本、构建版本及场景。首批验收矩阵为 macOS 14+ arm64／x64、Windows 11 x64、Ubuntu 24.04 LTS x64；各平台须分别验证真实进程，且构建和运行检查不可互相替代。M1 先在现有 macOS arm64 环境验证终端与状态链路；macOS Intel 的修复版交互仍待复测；Windows 与 Ubuntu 的可交互验收环境缺失。未覆盖平台保持未验收。
 
 ## 9. 首版验收清单
 

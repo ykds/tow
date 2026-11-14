@@ -465,6 +465,9 @@ fn spawn_session(state: &WorkspaceState, app: &AppHandle, session_id: &str) -> R
                             cmd.env("PATH", codex_shell_path(&codex, wrapper_dir, inherited_path.as_deref())?);
                             cmd.env("AGENT_WORKSPACE_CODEX_COMMAND", codex);
                             cmd.env("AGENT_WORKSPACE_CODEX_WRAPPER_DIR", wrapper_dir);
+                            let helper = quote_command(&helper_path);
+                            cmd.env("AGENT_WORKSPACE_CODEX_SUBMIT_HOOK", hook_config("UserPromptSubmit", &format!("{helper} --hook-event title-codex")));
+                            cmd.env("AGENT_WORKSPACE_CODEX_STOP_HOOK", hook_config("Stop", &format!("{helper} --hook-event stop-codex")));
                             #[cfg(unix)] if std::env::var_os("SHELL").as_ref().and_then(|shell| Path::new(shell).file_name().map(|name| name == "zsh")).unwrap_or(false) {
                                 let proxy_dir = wrapper_dir.join("zsh");
                                 if proxy_dir.join(".zshrc").is_file() {
@@ -1342,34 +1345,23 @@ mod tests {
         let root = std::env::temp_dir().join(format!("two-codex-wrapper-{}", Uuid::new_v4()));
         fs::create_dir_all(&root).unwrap();
         let codex = root.join("original-codex");
-        fs::write(&codex, "#!/bin/sh\nprintf 'wrapper-args:%s\\n' \"$*\"\n").unwrap();
+        fs::write(&codex, "#!/bin/sh\nprintf 'wrapper-arg:%s\\n' \"$@\"\n").unwrap();
         fs::set_permissions(&codex, fs::Permissions::from_mode(0o755)).unwrap();
-        let wrapper_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources");
-        let path = codex_shell_path(&codex, &wrapper_dir, Some(OsStr::new("/usr/bin:/bin"))).unwrap();
-        let pair = native_pty_system().openpty(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 }).unwrap();
-        let mut reader = pair.master.try_clone_reader().unwrap();
-        let mut writer = pair.master.take_writer().unwrap();
-        let mut command = CommandBuilder::new_default_prog();
-        command.cwd(&root);
-        command.env("HOME", &root);
-        command.env("SHELL", "/bin/sh");
-        command.env("PATH", path);
-        command.env("AGENT_WORKSPACE_CODEX_COMMAND", &codex);
-        let mut child = pair.slave.spawn_command(command).unwrap();
-        drop(pair.slave);
-        writer.write_all(b"codex test-arg\nexit\n").unwrap();
-        let mut output = String::new();
-        for _ in 0..64 {
-            let mut bytes = [0u8; 1024];
-            let size = reader.read(&mut bytes).unwrap();
-            if size == 0 { break; }
-            output.push_str(&String::from_utf8_lossy(&bytes[..size]));
-            if output.contains("wrapper-args:--no-daemon test-arg") { break; }
-        }
-        let success = child.wait().unwrap().success();
+        let wrapper = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/codex");
+        let submit_hook = hook_config("UserPromptSubmit", "helper --hook-event title-codex");
+        let stop_hook = hook_config("Stop", "helper --hook-event stop-codex");
+        let result = std::process::Command::new(&wrapper)
+            .arg("test-arg")
+            .env("AGENT_WORKSPACE_CODEX_COMMAND", &codex)
+            .env("AGENT_WORKSPACE_CODEX_SUBMIT_HOOK", &submit_hook)
+            .env("AGENT_WORKSPACE_CODEX_STOP_HOOK", &stop_hook)
+            .output().unwrap();
         fs::remove_dir_all(root).unwrap();
-        assert!(success);
-        assert!(output.contains("wrapper-args:--no-daemon test-arg"), "shell output: {output}");
+        assert!(result.status.success());
+        let output = String::from_utf8_lossy(&result.stdout);
+        for expected in ["wrapper-arg:--no-daemon", "wrapper-arg:-c", &format!("wrapper-arg:{submit_hook}"), &format!("wrapper-arg:{stop_hook}"), "wrapper-arg:test-arg"] {
+            assert!(output.contains(expected), "missing {expected}, wrapper output: {output}");
+        }
     }
 
     #[cfg(target_os = "macos")]
